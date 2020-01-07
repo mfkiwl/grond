@@ -1054,7 +1054,6 @@ class RandomStateManager(object):
 
         if name not in self.rstates:
             self.rstates[name] = num.random.RandomState(seed)
-        print('get', name, self.rstates, self)
         return self.rstates[name]
 
     @property
@@ -1062,8 +1061,6 @@ class RandomStateManager(object):
         return len(self.rstates)
 
     def save_state(self, fname):
-        print('save', self.rstates, self)
-
         with open(fname, 'wb') as f:
 
             for name, rstate in self.rstates.items():
