@@ -400,7 +400,10 @@ def command_scenario(args):
             help='center latitude of the scenario (default: %default)')
         parser.add_option(
             '--radius', dest='radius', type=float, default=100.,
-            help='radius of the the scenario in [km] (default: %default)')
+            help='radius of the scenario in [km] (default: %default)')
+        parser.add_option(
+            '--source-radius', dest='source_radius', type=float, default=10.,
+            help='radius of the source area in [km] (default: %default)')
         parser.add_option(
             '--stations-paths', dest='stations_paths', type=str, default=None,
             help='paths to a Pyrocko station file, seperated by \',\''
@@ -479,6 +482,7 @@ def command_scenario(args):
         if options.problem == 'cmt':
             problem = grond_scenario.DCSourceProblem(
                 nevents=options.nevents,
+                radius=options.source_radius,
                 magnitude_min=options.magnitude_range[0],
                 magnitude_max=options.magnitude_range[1])
         elif options.problem == 'rectangular':
