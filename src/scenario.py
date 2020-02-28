@@ -45,7 +45,7 @@ class GrondScenario(object):
                 'Directory "%s" already exists! Use --force to overwrite'
                 % prj_dir)
         elif op.exists(prj_dir) and force:
-            logger.info('Overwriting directory %s.' % prj_dir)
+            logger.info('Overwriting directory %s.', prj_dir)
             shutil.rmtree(prj_dir)
 
         util.ensuredir(prj_dir)
@@ -85,7 +85,8 @@ class GrondScenario(object):
 
     def get_scenario(self):
         if self.rebuild:
-            scenario_file = op.join(self.project_dir, 'data', 'scenario.yml')
+            scenario_file = op.join(self.project_dir, 'data', 'scenario',
+                                    'scenario.yml')
             sc = guts.load(filename=scenario_file)
             return sc
 
@@ -105,10 +106,12 @@ class GrondScenario(object):
                                for obs in self.observations],
             source_generator=self.problem.get_scenario_source_generator())
 
-    def create_scenario(self, interactive=True, gf_store_superdirs=None):
+    def create_scenario(
+            self, force=False, interactive=True, gf_store_superdirs=None):
         logger.info('Creating scenario...')
 
         scenario = self.get_scenario()
+        self.create_project_dir(force)
         util.ensuredir(self.get_gf_stores_dir())
 
         if gf_store_superdirs is None:
@@ -176,10 +179,7 @@ class GrondScenario(object):
     def build(self, force=False, interactive=False, gf_store_superdirs=None):
         logger.info('Building scenario...')
 
-        self.create_project_dir(force)
-
-        self.create_scenario(
-            interactive=interactive, gf_store_superdirs=gf_store_superdirs)
+        self.create_scenario(force, interactive, gf_store_superdirs)
 
         self.create_grond_files()
 
