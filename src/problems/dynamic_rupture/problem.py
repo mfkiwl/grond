@@ -100,8 +100,8 @@ class DynamicRuptureProblem(Problem):
              for k in self.base_source.keys()
              if k in d}
 
-        traction_strike = num.cos(d['rake'] * d2r)
-        traction_dip = 1. - traction_strike
+        traction_strike = num.cos(d['rake']*d2r)
+        traction_dip = -num.sin(d['rake']*d2r)
         p['tractions'] = (traction_strike, traction_dip, 0.)
 
         source = self.base_source.clone(**p)
