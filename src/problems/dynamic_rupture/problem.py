@@ -105,7 +105,6 @@ class DynamicRuptureProblem(Problem):
         p['tractions'] = (traction_strike, traction_dip, 0.)
 
         source = self.base_source.clone(**p)
-        print(p)
         return source
 
     def random_uniform(self, xbounds, rstate, fixed_magnitude=None):
