@@ -282,10 +282,15 @@ class Problem(Object):
     def get_engine(self):
         return self._engine
 
+    def get_gf_store_ids(self):
+        return tuple(set([t.store_id for t in self.targets]))
+
     def get_gf_store(self, target):
+        if not isinstance(target, str):
+            target = target.store_id
         if self.get_engine() is None:
             raise GrondError('Cannot get GF Store, modelling is not set up.')
-        return self.get_engine().get_store(target.store_id)
+        return self.get_engine().get_store(target)
 
     def random_uniform(self, xbounds, rstate, fixed_magnitude=None):
         if fixed_magnitude is not None:

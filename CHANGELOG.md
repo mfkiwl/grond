@@ -51,6 +51,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - `RandomStateManager` is now centrally attached to `Problem`.
+- `ModelHistory` loading from memmap.
 
 ### Fixed
 - Fix search in HTML report.

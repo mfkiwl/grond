@@ -105,12 +105,8 @@ class DynamicRuptureProblem(Problem):
         p['tractions'] = (traction_strike, traction_dip, 0.)
 
         source = self.base_source.clone(**p)
-
+        print(p)
         return source
-
-    def make_dependant(self, xs, pname):
-        # add rake
-        return super().make_dependant(xs, pname)
 
     def random_uniform(self, xbounds, rstate, fixed_magnitude=None):
         if fixed_magnitude is not None:
@@ -133,7 +129,9 @@ class DynamicRuptureProblem(Problem):
 
     @classmethod
     def get_plot_classes(cls):
+        from . import plot
         plots = super(DynamicRuptureProblem, cls).get_plot_classes()
+        plots.extend([plot.DynamicRuptureSlipMap])
         return plots
 
 
