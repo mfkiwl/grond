@@ -100,12 +100,7 @@ class DynamicRuptureProblem(Problem):
              for k in self.base_source.keys()
              if k in d}
 
-        traction_strike = num.cos(d['rake']*d2r)
-        traction_dip = -num.sin(d['rake']*d2r)
-        p['tractions'] = (traction_strike, traction_dip, 0.)
-
-        source = self.base_source.clone(**p)
-        return source
+        return self.base_source.clone(**p)
 
     def random_uniform(self, xbounds, rstate, fixed_magnitude=None):
         if fixed_magnitude is not None:

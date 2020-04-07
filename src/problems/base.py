@@ -38,6 +38,10 @@ def nextpow2(i):
     return 2**int(math.ceil(math.log(i) / math.log(2.)))
 
 
+def nextcapacity(i):
+    return int(math.ceil(i / 1024) * 1024)
+
+
 def correlated_weights(values, weight_matrix):
     '''
     Applies correlated weights to values
