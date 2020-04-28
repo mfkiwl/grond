@@ -1,8 +1,7 @@
 import numpy as num
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
-
-from pyrocko.gf import PseudoDynamicRupture
+from matplotlib import colors, patheffects
 
 from pyrocko.guts import Tuple, Float
 from pyrocko.plot import mpl_init
@@ -14,7 +13,7 @@ km = 1e3
 
 
 def km_fmt(x, p):
-    return '%.2f' % (x / km)
+    return '%.1f' % (x / km)
 
 
 class DynamicRuptureSlipMap(PlotConfig):
@@ -22,6 +21,9 @@ class DynamicRuptureSlipMap(PlotConfig):
     Slip map of best solution.
     '''
     name = 'rupture_slip_map'
+    dt_contour = Float.T(
+        default=0.5,
+        help='Rupture propagation contourline interval in seconds.')
     size_cm = Tuple.T(2, Float.T(), default=(20., 20.))
 
     def make(self, environ):
@@ -40,7 +42,8 @@ class DynamicRuptureSlipMap(PlotConfig):
             description=u'''
 Slip distribution and rake of the finite slip solution. The absolute slip
 is color coded. The black star marks the nucleation point.
-''')
+Contour lines indicate the rupture evolution in %.1f s intervals.
+''' % self.dt_contour)
 
     def draw_figures(self, history, problem):
         source = history.get_best_source()
@@ -50,9 +53,16 @@ is color coded. The black star marks the nucleation point.
 
         interpolation = 'nearest_neighbor'
 
-        source.ensure_tractions()
         source.discretize_patches(store, interpolation)
+        patches = source.patches
         dislocations = source.get_okada_slip(scale_slip=True)
+
+        patches_x = num.array([p.length_pos for p in patches])\
+            .reshape(source.nx, source.ny)
+        patches_y = num.array([p.width_pos for p in patches])\
+            .reshape(source.nx, source.ny)
+        patches_t = num.array([p.time for p in patches])\
+            .reshape(source.nx, source.ny)
 
         fig = plt.figure()
         ax = fig.gca()
@@ -64,8 +74,38 @@ is color coded. The black star marks the nucleation point.
             abs_disloc.T,
             cmap='YlOrRd',
             origin='upper',
-            aspect='auto',
+            aspect='equal',
             extent=(0., source.length, 0., source.width))
+
+        patches_t -= patches_t.min()
+
+        nlevels = patches_t.max() // self.dt_contour
+        contours = num.arange(nlevels) * self.dt_contour
+        contours += patches_t.min()
+
+        def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+            return colors.LinearSegmentedColormap.from_list(
+                'trunc({n},{a:.2f},{b:.2f})'.format(
+                    n=cmap.name, a=minval, b=maxval),
+                cmap(num.linspace(minval, maxval, n)))
+
+        cmap = truncate_colormap(plt.get_cmap('winter'), 0., 0.8)
+
+        contour = ax.contour(
+            patches_x + source.length/2, patches_y, patches_t,
+            levels=contours, alpha=.8, colors='k')
+
+        labels = ax.clabel(
+            contour, contour.levels[::2],
+            inline=True, fmt='%.1f s')
+
+        for l in labels:
+            l.set_rotation(0.)
+            l.set_fontweight('semibold')
+            l.set_fontsize('small')
+            l.set_path_effects([
+                patheffects.Stroke(linewidth=1.25, foreground='beige'),
+                patheffects.Normal()])
 
         slip_strike = dislocations[:, 0]
         slip_dip = dislocations[:, 1]
@@ -80,8 +120,9 @@ is color coded. The black star marks the nucleation point.
 
         ax.quiver(
             x_quiver, y_quiver, slip_strike, -slip_dip,
-            facecolor='white', edgecolor='k', linewidth=.5,
-            alpha=.7)
+            facecolor='none', edgecolor='k', linewidth=.7,
+            scale=10, headwidth=3,
+            cmap='YlOrRd', alpha=.6)
 
         ax.invert_yaxis()
 
@@ -97,9 +138,11 @@ is color coded. The black star marks the nucleation point.
         ax.yaxis.set_major_formatter(FuncFormatter(km_fmt))
 
         ax.set_xlabel('Length [km]')
-        ax.set_ylabel('Down-dip width [km]')
+        ax.set_ylabel('Width [km]')
 
-        cmap = fig.colorbar(im)
-        cmap.set_label('Slip [m]')
+        cmap = fig.colorbar(
+            im, orientation='horizontal', pad=0.2, shrink=.8,
+            format='%.2f m')
+        cmap.set_label('Slip')
 
         yield PlotItem(name='fig_1'), fig
