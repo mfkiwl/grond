@@ -10,9 +10,9 @@ class Analyser(object):
     def analyse(self, problem, ds):
         pass
 
-    def get_rstate(self, problem):
+    def get_rstate(self, problem, seed=None):
         return problem.get_rstate_manager().get_rstate(
-            self.__class__.__name__)
+            self.__class__.__name__, seed)
 
 
 class AnalyserConfig(Object):

@@ -13,6 +13,7 @@ import os.path as op
 import os
 import time
 import struct
+import threading
 
 from pyrocko import gf, util, guts
 from pyrocko.guts import Object, String, List, Dict, Int
@@ -1057,6 +1058,7 @@ class RandomStateManager(object):
 
     def __init__(self):
         self.rstates = {}
+        self.lock = threading.Lock()
 
     def get_rstate(self, name, seed=None):
         assert len(name) <= self.MAX_LEN
@@ -1070,32 +1072,34 @@ class RandomStateManager(object):
         return len(self.rstates)
 
     def save_state(self, fname):
-        with open(fname, 'wb') as f:
+        with self.lock:
+            with open(fname, 'wb') as f:
 
-            for name, rstate in self.rstates.items():
-                s, arr, pos, has_gauss, chached_gauss = rstate.get_state()
-                f.write(
-                    self.save_struct.pack(
-                        name.encode(), s.encode(), arr.tobytes(),
-                        pos, has_gauss, chached_gauss))
+                for name, rstate in self.rstates.items():
+                    s, arr, pos, has_gauss, chached_gauss = rstate.get_state()
+                    f.write(
+                        self.save_struct.pack(
+                            name.encode(), s.encode(), arr.tobytes(),
+                            pos, has_gauss, chached_gauss))
 
     def load_state(self, fname):
-        with open(fname, 'rb') as f:
-            while True:
-                buff = f.read(self.save_struct.size)
-                if not buff:
-                    break
+        with self.lock:
+            with open(fname, 'rb') as f:
+                while True:
+                    buff = f.read(self.save_struct.size)
+                    if not buff:
+                        break
 
-                name, s, arr, pos, has_gauss, chached_gauss = \
-                    self.save_struct.unpack(buff)
+                    name, s, arr, pos, has_gauss, chached_gauss = \
+                        self.save_struct.unpack(buff)
 
-                name = name.replace(b'\x00', b'').decode()
-                s = s.replace(b'\x00', b'').decode()
-                arr = num.frombuffer(arr, dtype=num.uint32)
+                    name = name.replace(b'\x00', b'').decode()
+                    s = s.replace(b'\x00', b'').decode()
+                    arr = num.frombuffer(arr, dtype=num.uint32)
 
-                rstate = num.random.RandomState()
-                rstate.set_state((s, arr, pos, has_gauss, chached_gauss))
-                self.rstates[name] = rstate
+                    rstate = num.random.RandomState()
+                    rstate.set_state((s, arr, pos, has_gauss, chached_gauss))
+                    self.rstates[name] = rstate
 
 
 def get_nmodels(dirname, problem):
