@@ -1101,7 +1101,6 @@ class RandomStateManager(object):
                     rstate.set_state((s, arr, pos, has_gauss, chached_gauss))
                     self.rstates[name] = rstate
 
-
 def get_nmodels(dirname, problem):
     fn = op.join(dirname, 'models')
     with open(fn, 'r') as f:
