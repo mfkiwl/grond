@@ -238,6 +238,13 @@ class Parameter(Object):
         else:
             return x*self.scale_factor
 
+    def get_type(self):
+        if self.type == 'float':
+            return float
+        elif self.type == 'int':
+            return int
+        raise AttributeError('unknown type %s' % self.type)
+
 
 class Path(String):
     pass

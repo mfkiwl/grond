@@ -159,6 +159,9 @@ class Problem(Object):
                 arr[ip] = d[p.name]
         return arr
 
+    def get_parameter_index(self, param_name):
+        return {k.name: ik for ik, k in enumerate(self.parameters)}[param_name]
+
     def get_rstate_manager(self):
         if self._rstate_manager is None:
             self._rstate_manager = RandomStateManager()
@@ -287,6 +290,12 @@ class Problem(Object):
     def get_engine(self):
         return self._engine
 
+    def get_source(self, x):
+        raise NotImplementedError
+
+    def pack(self, source):
+        raise NotImplementedError
+
     def get_gf_store_ids(self):
         return tuple(set([t.store_id for t in self.targets]))
 
@@ -308,7 +317,7 @@ class Problem(Object):
         x += xbounds[:, 0]
         return x
 
-    def preconstrain(self, x):
+    def preconstrain(self, x, optimizer=None):
         return x
 
     def extract(self, xs, i):

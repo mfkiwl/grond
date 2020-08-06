@@ -2,8 +2,7 @@ import numpy as num
 import logging
 
 from pyrocko import gf, util
-from pyrocko.gf import tractions as tr
-from pyrocko.guts import String, Float, Dict, Int, Bool
+from pyrocko.guts import String, Float, Dict, Int, Bool, StringChoice
 
 from grond.meta import expand_template, Parameter, has_get_plot_classes, \
     GrondError
@@ -22,22 +21,21 @@ as_gpa = dict(scale_factor=1e9, scale_unit='GPa')
 class DynamicRuptureProblemConfig(ProblemConfig):
 
     ranges = Dict.T(String.T(), gf.Range.T())
-    decimation_factor = Int.T(default=1)
+    decimation_factor = Int.T(
+        default=1,
+        help='Decimation factor of the discretized sup-faults')
     distance_min = Float.T(default=0.)
     nthreads = Int.T(default=1)
-    nx = Int.T(default=10)
-    ny = Int.T(default=10)
+    adaptive_resolution = StringChoice.T(
+        choices=('off', 'linear', 'uniqueness'),
+        default='off')
+    adaptive_start = Int.T(
+        default=0)
 
     pure_shear = Bool.T(
         default=True)
-
-    tractions = tr.TractionField.T(
-        default=tr.TractionComposition(
-            components=[
-                tr.HomogeneousTractions(),
-                tr.RectangularTaper()
-            ]),
-        help='Traction field the rupture plane is exposed to.')
+    smooth_rupture = Bool.T(
+        default=False)
 
     def get_problem(self, event, target_groups, targets):
         if self.decimation_factor != 1:
@@ -49,13 +47,11 @@ class DynamicRuptureProblemConfig(ProblemConfig):
         base_source = gf.PseudoDynamicRupture.from_pyrocko_event(
             event,
             anchor='top',
-            nx=self.nx,
-            ny=self.ny,
             magnitude=None,
             decimation_factor=self.decimation_factor,
             nthreads=self.nthreads,
-            tractions=self.tractions,
-            pure_shear=self.pure_shear)
+            pure_shear=self.pure_shear,
+            smooth_rupture=self.smooth_rupture)
 
         subs = dict(
             event_name=event.name,
@@ -69,8 +65,9 @@ class DynamicRuptureProblemConfig(ProblemConfig):
             targets=targets,
             ranges=self.ranges,
             norm_exponent=self.norm_exponent,
-            nthreads=self.nthreads,  # TODO: remove?
-            )
+            nthreads=self.nthreads,
+            adaptive_resolution=self.adaptive_resolution,
+            adaptive_start=self.adaptive_start)
 
         return problem
 
@@ -91,6 +88,8 @@ class DynamicRuptureProblem(Problem):
         Parameter('rake', 'deg', label='Rake'),
         Parameter('nucleation_x', 'offset', label='Nucleation X'),
         Parameter('nucleation_y', 'offset', label='Nucleation Y'),
+        Parameter('nx', 'patches', label='nx', optimize=False),
+        Parameter('ny', 'patches', label='ny', optimize=False)
     ]
 
     problem_waveform_parameters = [
@@ -100,6 +99,8 @@ class DynamicRuptureProblem(Problem):
     dependants = []
 
     distance_min = Float.T(default=0.0)
+    adaptive_resolution = String.T()
+    adaptive_start = Int.T()
 
     def pack(self, source):
         arr = self.get_parameter_array(source)
@@ -113,6 +114,9 @@ class DynamicRuptureProblem(Problem):
         p = {k: float(self.ranges[k].make_relative(self.base_source[k], d[k]))
              for k in self.base_source.keys()
              if k in d}
+
+        p['nx'] = int(p['nx'])
+        p['ny'] = int(p['ny'])
 
         return self.base_source.clone(**p)
 
@@ -128,11 +132,33 @@ class DynamicRuptureProblem(Problem):
 
         return x
 
-    def preconstrain(self, x):
-        # source = self.get_source(x)
-        # if any(self.distance_min > source.distance_to(t)
-        #        for t in self.targets):
-        # raise Forbidden()
+    def preconstrain(self, x, optimiser=None):
+
+        if optimiser and self.adaptive_resolution == 'linear' and \
+                optimiser.iiter >= self.adaptive_start:
+            
+            progress = (optimiser.iiter - self.adaptive_start) / \
+                (optimiser.niterations - self.adaptive_start)
+
+            nx = self.ranges['nx'].start + \
+                progress * (self.ranges['nx'].stop - self.ranges['nx'].start)
+            ny = self.ranges['ny'].start + \
+                progress * (self.ranges['ny'].stop - self.ranges['ny'].start)
+
+
+        elif optimiser and self.adaptive_resolution == 'uniqueness' and \
+                optimiser.iiter >= self.adaptive_start:
+            raise NotImplementedError
+
+        else:
+            nx = self.ranges['nx'].start
+            ny = self.ranges['ny'].start
+
+        idx_nx = self.get_parameter_index('nx')
+        idx_ny = self.get_parameter_index('ny')
+        x[idx_nx] = round(nx)
+        x[idx_ny] = round(ny)
+
         return x
 
     @classmethod

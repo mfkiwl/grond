@@ -211,7 +211,7 @@ class CMTProblem(Problem):
 
         return x.tolist()
 
-    def preconstrain(self, x):
+    def preconstrain(self, x, optimizer=False):
         d = self.get_parameter_dict(x)
         m6 = num.array([d.rmnn, d.rmee, d.rmdd, d.rmne, d.rmnd, d.rmed],
                        dtype=num.float)

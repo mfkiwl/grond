@@ -86,8 +86,8 @@ class Sample(Object):
     ilink_base = Int.T(optional=True)
     imodel_base = Int.T(optional=True)
 
-    def preconstrain(self, problem):
-        self.model = problem.preconstrain(self.model)
+    def preconstrain(self, problem, optimiser=None):
+        self.model = problem.preconstrain(self.model, optimiser)
 
     def pack_context(self):
         i = num.zeros(4, dtype=num.int)
@@ -113,6 +113,7 @@ class SamplerPhase(Object):
     def __init__(self, *args, **kwargs):
         Object.__init__(self, *args, **kwargs)
         self._rstate = None
+        self.optimiser = None
 
     def get_rstate(self, problem):
         if self._rstate is None:
@@ -131,7 +132,7 @@ class SamplerPhase(Object):
         for ntries_preconstrain in range(self.ntries_preconstrain_limit):
             try:
                 sample = self.get_raw_sample(problem, iiter, chains)
-                sample.preconstrain(problem)
+                sample.preconstrain(problem, self.optimiser)
                 return sample
 
             except Forbidden:
@@ -140,6 +141,9 @@ class SamplerPhase(Object):
         raise GrondError(
             'could not find any suitable candidate sample within %i tries' % (
                 self.ntries_preconstrain_limit))
+
+    def set_optimiser(self, optimiser):
+        self.optimiser = optimiser
 
 
 class InjectionSamplerPhase(SamplerPhase):
@@ -478,6 +482,9 @@ class HighScoreOptimiser(Optimiser):
         self._status_chains = None
         self._rstate_bootstrap = None
 
+        for phase in self.sampler_phases:
+            phase.set_optimiser(self)
+
     def get_rstate_bootstrap(self, problem):
         if self._rstate_bootstrap is None:
             self._rstate_bootstrap = problem.get_rstate_manager().get_rstate(
@@ -632,6 +639,7 @@ class HighScoreOptimiser(Optimiser):
         isbad_mask = None
         self._tlog_last = 0
         for iiter in range(history.nmodels, niter):
+            self.iiter = iiter
             iphase, phase, iiter_phase = self.get_sampler_phase(iiter)
             self.log_progress(problem, iiter, niter, phase, iiter_phase)
 

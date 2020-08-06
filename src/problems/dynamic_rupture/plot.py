@@ -121,7 +121,7 @@ Contour lines indicate the rupture evolution in %.1f s intervals.
         ax.quiver(
             x_quiver, y_quiver, slip_strike, -slip_dip,
             facecolor='none', edgecolor='k', linewidth=.7,
-            scale=10, headwidth=3,
+            scale=75 / abs_disloc.max(), headwidth=3,
             cmap='YlOrRd', alpha=.6)
 
         ax.invert_yaxis()
@@ -131,8 +131,8 @@ Contour lines indicate the rupture evolution in %.1f s intervals.
 
         ax.scatter(
             nucleation_x, nucleation_y,
-            s=20, color='k', marker='*',
-            alpha=.7)
+            s=60, color='w', edgecolor='k', marker='*',
+            linewidths=.5, alpha=.7)
 
         ax.xaxis.set_major_formatter(FuncFormatter(km_fmt))
         ax.yaxis.set_major_formatter(FuncFormatter(km_fmt))
@@ -142,7 +142,7 @@ Contour lines indicate the rupture evolution in %.1f s intervals.
 
         cmap = fig.colorbar(
             im, orientation='horizontal', pad=0.2, shrink=.8,
-            format='%.2f m')
-        cmap.set_label('Slip')
+            format='%.2f')
+        cmap.set_label('Slip [m]')
 
         yield PlotItem(name='fig_1'), fig
