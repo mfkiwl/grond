@@ -86,13 +86,13 @@ class DynamicRuptureProblem(Problem):
         Parameter('strike', 'deg', label='Strike'),
         Parameter('dip', 'deg', label='Dip'),
         Parameter('rake', 'deg', label='Rake'),
-        Parameter('nucleation_x', 'offset', label='Nucleation X'),
-        Parameter('nucleation_y', 'offset', label='Nucleation Y'),
         Parameter('nx', 'patches', label='nx', optimize=False),
         Parameter('ny', 'patches', label='ny', optimize=False)
     ]
 
     problem_waveform_parameters = [
+        Parameter('nucleation_x', 'offset', label='Nucleation X'),
+        Parameter('nucleation_y', 'offset', label='Nucleation Y'),
         Parameter('time', 's', label='Time'),
     ]
 
@@ -110,15 +110,21 @@ class DynamicRuptureProblem(Problem):
         return arr
 
     def get_source(self, x):
+        src = self.base_source
+
         d = self.get_parameter_dict(x)
-        p = {k: float(self.ranges[k].make_relative(self.base_source[k], d[k]))
-             for k in self.base_source.keys()
+        p = {k: float(self.ranges[k].make_relative(src[k], d[k]))
+             for k in src.keys()
              if k in d}
 
         p['nx'] = int(p['nx'])
         p['ny'] = int(p['ny'])
 
-        return self.base_source.clone(**p)
+        if p['nx'] != src.nx or p['ny'] != src.ny:
+            logger.info(
+                'refining patches to %dx%d', p['nx'], p['ny'])
+
+        return src.clone(**p)
 
     def random_uniform(self, xbounds, rstate, fixed_magnitude=None):
         if fixed_magnitude is not None:
@@ -133,18 +139,20 @@ class DynamicRuptureProblem(Problem):
         return x
 
     def preconstrain(self, x, optimiser=None):
+        ranges = self.ranges
 
         if optimiser and self.adaptive_resolution == 'linear' and \
                 optimiser.iiter >= self.adaptive_start:
-            
+
             progress = (optimiser.iiter - self.adaptive_start) / \
                 (optimiser.niterations - self.adaptive_start)
 
-            nx = self.ranges['nx'].start + \
-                progress * (self.ranges['nx'].stop - self.ranges['nx'].start)
-            ny = self.ranges['ny'].start + \
-                progress * (self.ranges['ny'].stop - self.ranges['ny'].start)
-
+            nx = num.floor(
+                ranges['nx'].start +
+                progress * (ranges['nx'].stop - ranges['nx'].start))
+            ny = num.floor(
+                ranges['ny'].start +
+                progress * (ranges['ny'].stop - ranges['ny'].start))
 
         elif optimiser and self.adaptive_resolution == 'uniqueness' and \
                 optimiser.iiter >= self.adaptive_start:
