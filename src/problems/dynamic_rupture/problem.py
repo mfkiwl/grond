@@ -48,6 +48,8 @@ class DynamicRuptureProblemConfig(ProblemConfig):
             event,
             anchor='top',
             magnitude=None,
+            nx=self.ranges['nx'].start,
+            ny=self.ranges['ny'].start,
             decimation_factor=self.decimation_factor,
             nthreads=self.nthreads,
             pure_shear=self.pure_shear,
@@ -114,15 +116,16 @@ class DynamicRuptureProblem(Problem):
 
         d = self.get_parameter_dict(x)
         p = {k: float(self.ranges[k].make_relative(src[k], d[k]))
-             for k in src.keys()
-             if k in d}
+             for k in src.keys() if k in d}
 
         p['nx'] = int(p['nx'])
         p['ny'] = int(p['ny'])
 
         if p['nx'] != src.nx or p['ny'] != src.ny:
-            logger.info(
-                'refining patches to %dx%d', p['nx'], p['ny'])
+            logger.info('refining patches to %dx%d', p['nx'], p['ny'])
+
+        src.nx = p['nx']
+        src.ny = p['ny']
 
         return src.clone(**p)
 
@@ -139,28 +142,27 @@ class DynamicRuptureProblem(Problem):
         return x
 
     def preconstrain(self, x, optimiser=None):
-        ranges = self.ranges
+        nx = self.ranges['nx']
+        ny = self.ranges['ny']
 
         if optimiser and self.adaptive_resolution == 'linear' and \
                 optimiser.iiter >= self.adaptive_start:
 
-            progress = (optimiser.iiter - self.adaptive_start) / \
+            progress = (optimiser.iiter - self.adaptive_start - 1) / \
                 (optimiser.niterations - self.adaptive_start)
 
             nx = num.floor(
-                ranges['nx'].start +
-                progress * (ranges['nx'].stop - ranges['nx'].start))
+                nx.start + progress * (nx.stop - nx.start + 1))
             ny = num.floor(
-                ranges['ny'].start +
-                progress * (ranges['ny'].stop - ranges['ny'].start))
+                ny.start + progress * (ny.stop - ny.start + 1))
 
         elif optimiser and self.adaptive_resolution == 'uniqueness' and \
                 optimiser.iiter >= self.adaptive_start:
             raise NotImplementedError
 
         else:
-            nx = self.ranges['nx'].start
-            ny = self.ranges['ny'].start
+            nx = nx.start
+            ny = ny.start
 
         idx_nx = self.get_parameter_index('nx')
         idx_ny = self.get_parameter_index('ny')
