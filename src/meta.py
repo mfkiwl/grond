@@ -162,6 +162,7 @@ class Parameter(Object):
     scale_unit = Unicode.T(optional=True)
     label = Unicode.T(optional=True)
     optional = Bool.T(default=True, optional=True)
+    optimize = Bool.T(default=True)
 
     def __init__(self, *args, **kwargs):
         if len(args) >= 1:
