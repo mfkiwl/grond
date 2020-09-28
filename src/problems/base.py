@@ -583,7 +583,6 @@ class Problem(Object):
         resp = engine.process(source, modelling_targets_unique,
                               nthreads=nthreads)
         modelling_results_unique = list(resp.results_list[0])
-
         modelling_results = [None] * len(modelling_targets)
 
         for mtarget, mresult in zip(

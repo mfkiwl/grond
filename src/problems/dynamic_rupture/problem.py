@@ -88,6 +88,7 @@ class DynamicRuptureProblem(Problem):
         Parameter('strike', 'deg', label='Strike'),
         Parameter('dip', 'deg', label='Dip'),
         Parameter('rake', 'deg', label='Rake'),
+        Parameter('gamma', 'vr/vs', label=r'$\gamma$'),
         Parameter('nx', 'patches', label='nx'),
         Parameter('ny', 'patches', label='ny')
     ]
