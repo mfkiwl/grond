@@ -57,9 +57,9 @@ Contour lines indicate the rupture evolution in %.1f s intervals.
         patches = source.patches
         dislocations = source.get_okada_slip(scale_slip=True)
 
-        patches_x = num.array([p.length_pos for p in patches])\
+        patches_x = num.array([p.ix for p in patches])\
             .reshape(source.nx, source.ny)
-        patches_y = num.array([p.width_pos for p in patches])\
+        patches_y = num.array([p.iy for p in patches])\
             .reshape(source.nx, source.ny)
         patches_t = num.array([p.time for p in patches])\
             .reshape(source.nx, source.ny)
