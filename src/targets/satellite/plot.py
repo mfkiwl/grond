@@ -313,11 +313,11 @@ edge marking the upper fault edge. Complete data extent is shown.
                 off_e = source.effective_lon - target.scene.frame.llLon
 
             turE, turN, tllE, tllN = zip(
-                *[(l.gridE.max()-off_e,
-                   l.gridN.max()-off_n,
-                   l.gridE.min()-off_e,
-                   l.gridN.min()-off_n)
-                  for l in target.scene.quadtree.leaves])
+                *[(leave.gridE.max()-off_e,
+                   leave.gridN.max()-off_n,
+                   leave.gridE.min()-off_e,
+                   leave.gridN.min()-off_n)
+                  for leave in target.scene.quadtree.leaves])
 
             turE, turN = map(max, (turE, turN))
             tllE, tllN = map(min, (tllE, tllN))
@@ -345,7 +345,7 @@ edge marking the upper fault edge. Complete data extent is shown.
 Surface displacements derived from satellite data.
 (Left) the input data, (center) the modelled
 data and (right) the model residual.
-'''.format(meta=scene.meta))
+''')
 
             stat_obs = result.statics_obs['displacement.los']
             stat_syn = result.statics_syn['displacement.los']

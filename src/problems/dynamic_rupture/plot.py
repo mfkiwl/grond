@@ -105,11 +105,11 @@ evolution in %.1f s intervals.
                 contour, contour.levels[::2],
                 inline=True, fmt='%.1f s')
 
-            for l in labels:
-                l.set_rotation(0.)
-                l.set_fontweight('semibold')
-                l.set_fontsize('small')
-                l.set_path_effects([
+            for label in labels:
+                label.set_rotation(0.)
+                label.set_fontweight('semibold')
+                label.set_fontsize('small')
+                label.set_path_effects([
                     patheffects.Stroke(linewidth=1.25, foreground='beige'),
                     patheffects.Normal()])
 
