@@ -56,9 +56,9 @@ evolution in %.1f s intervals.
         interpolation = 'nearest_neighbor'
 
         sources = (source_best, source_mean)
-        label = ('Ensemble best', 'Ensemble mean')
+        plot_labels = ('Ensemble best', 'Ensemble mean')
 
-        for i, (source, label) in enumerate(zip(sources, label)):
+        for i, (source, plabel) in enumerate(zip(sources, plot_labels)):
             fig, ax = plt.subplots(1, 1)
 
             # ToDo in function with "mean", "best" as arg
@@ -152,8 +152,8 @@ evolution in %.1f s intervals.
             cmap.set_label('Slip [m]')
 
             item = PlotItem(
-                name=label.replace(' ', '_').lower(),
-                title='%s slip distribution' % (label.lower()),
+                name=plabel.replace(' ', '_').lower(),
+                title='%s slip distribution' % (plabel.lower()),
                 description=u'')
 
             yield item, fig
