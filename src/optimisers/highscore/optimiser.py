@@ -7,10 +7,11 @@ import time
 import numpy as num
 from collections import OrderedDict
 
-from pyrocko.guts import StringChoice, Int, Float, Object, List
+from pyrocko.guts import StringChoice, Int, Float, Object, List, load
 from pyrocko.guts_array import Array
 
-from grond.meta import GrondError, Forbidden, has_get_plot_classes
+from grond.meta import GrondError, Forbidden, has_get_plot_classes, Path
+from grond import problems
 from grond.problems.base import ModelHistory
 from grond.optimisers.base import Optimiser, OptimiserConfig, BadProblem, \
     OptimiserStatus
@@ -146,12 +147,112 @@ class SamplerPhase(Object):
         self.optimiser = optimiser
 
 
+class InjectionError(Exception):
+    pass
+
+
 class InjectionSamplerPhase(SamplerPhase):
+    '''Inject predefined/precomputed models into the optimisation
+
+    Injected models are given either as an array or are generated from
+    sources/events given in a file. Depending on the problem different sources
+    or events can be used:
+
+    * :py:class:`grond.problems.cmt.problem.CMTProblem` uses as input:
+        * :py:class:`pyrocko.model.event.Event` with
+            :py:class:`pyrocko.moment_tensor.MomentTensor`,
+        * :py:class:`pyrocko.gf.seismosizer.DCSource`,
+        * :py:class:`pyrocko.gf.seismosizer.MTSource`.
+    * :py:class:`grond.problems.double_dc.problem.DoubleDCProblem` uses as
+        input:
+        * :py:class:`pyrocko.gf.seismosizer.DoubleDCSource`.
+    * :py:class:`grond.problems.vlvd.problem.VLVDProblem` uses as input:
+        * :py:class:`pyrocko.gf.seismosizer.VLVDSource`.
+    * :py:class:`grond.problems.rectangular.problem.RectangularProblem` uses as
+        input:
+        * :py:class:`pyrocko.gf.seismosizer.RectangularSource`.
+    * :py:class:`grond.problems.dynamic_rupture.problem.DynamicRuptureProblem`
+        uses as input:
+        * :py:class:`pyrocko.gf.seismosizer.PseudoDynamicRupture`.
+
+    Only a single source or event file can be handled in one
+    :py:class:`grond.optimisers.highscore.optimiser.InjectionSamplerPhase`. The
+    number of iterations is adjusted according to the number of sources or
+    events found.
+    '''
     xs_inject = Array.T(
+        optional=True,
         dtype=num.float, shape=(None, None),
-        help='Array with the reference model.')
+        help='Array with the injected models.')
+    sources_path = Path.T(
+        optional=True,
+        help='File with sources to be injected as models')
+    events_path = Path.T(
+        optional=True,
+        help='File with events to be injected as models')
+
+    def _xs_inject_from_sources(self, problem):
+        sources = load(filename=self.sources_path)
+
+        if len(sources) == 0:
+            raise InjectionError('No sources found in the given sources_path.')
+
+        if num.unique([s.T.classname for s in sources]).shape[0] > 1:
+            raise InjectionError(
+                'Sources are not of same type in the given file.')
+
+        return num.array([problem.source_to_x(s) for s in sources])
+
+    def _xs_inject_from_events(self, problem):
+        from pyrocko import model
+
+        if not hasattr(problem, 'event_to_x'):
+            raise InjectionError(
+                'Events can only be injected using the %s. '
+                'Try injecting as sources defining the "sources_path" '
+                'attribute instead.' % (
+                    problems.CMTProblem.T.classname))
+
+        events = model.load_events(filename=self.events_path)
+
+        if len(events) == 0:
+            raise InjectionError('No events found in the given events_path.')
+
+        events = [ev for ev in events if ev.moment_tensor is not None]
+        n_ev = len(events)
+
+        if n_ev == 0:
+            raise InjectionError(
+                'The loaded events have no moment tensor information.')
+
+        return num.array([problem.event_to_x(e) for e in events])
+
+    def xs_inject_from_file(self, problem):
+        if self.sources_path and self.events_path:
+            raise AttributeError(
+                'Sources_path and events_path are both given but mutually '
+                'exclusive.')
+        elif self.sources_path:
+            xs_inject = self._xs_inject_from_sources(problem)
+        elif self.events_path:
+            xs_inject = self._xs_inject_from_events(problem)
+        else:
+            raise IndexError(
+                'No event/source file found to generate xs_inject array from.')
+
+        if xs_inject.shape[0] != self.niterations:
+            logger.warn(
+                'Number of injected models (%i) not equal to the number of '
+                'iterations (%i) and is adjusted accordingly.' % (
+                    xs_inject.shape[0], self.niterations))
+            self.niterations = xs_inject.shape[0]
+
+        self.xs_inject = xs_inject
 
     def get_raw_sample(self, problem, iiter, chains):
+        if self.xs_inject is None:
+            self.xs_inject_from_file(problem)
+
         return Sample(model=self.xs_inject[iiter, :])
 
 

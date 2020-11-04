@@ -15,7 +15,7 @@ import time
 import struct
 import threading
 
-from pyrocko import gf, util, guts
+from pyrocko import gf, util, guts, orthodrome as pod
 from pyrocko.guts import Object, String, List, Dict, Int
 
 from grond.meta import ADict, Parameter, GrondError, xjoin, Forbidden, \
@@ -295,6 +295,25 @@ class Problem(Object):
 
     def pack(self, source):
         raise NotImplementedError
+
+    def source_to_x(self, source):
+        bs = self.base_source
+        n, e = pod.latlon_to_ne_numpy(bs.lat, bs.lon, source.lat, source.lon)
+
+        source.lat, source.lon = bs.lat, bs.lon
+        source.north_shift += n - bs.north_shift
+        source.east_shift += e - bs.east_shift
+
+        tmin, tmax = self.ranges['time'].start, self.ranges['time'].stop
+
+        if (source.time - bs.time < tmin) or (source.time - bs.time > tmax):
+            rstatem = self.get_rstate_manager()
+            rstate = rstatem.get_rstate(name='source2x')
+
+            source.time = bs.time
+            source.time += rstate.uniform(low=tmin, high=tmax, size=1)
+
+        return self.pack(source)
 
     def get_gf_store_ids(self):
         return tuple(set([t.store_id for t in self.targets]))
