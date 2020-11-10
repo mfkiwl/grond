@@ -176,7 +176,7 @@ class DynamicRuptureProblem(Problem):
     def get_plot_classes(cls):
         from . import plot
         plots = super(DynamicRuptureProblem, cls).get_plot_classes()
-        plots.extend([plot.DynamicRuptureSlipMap])
+        plots.extend([plot.DynamicRuptureSlipMap, plot.DynamicRuptureSTF])
         return plots
 
 

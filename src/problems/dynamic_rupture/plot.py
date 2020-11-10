@@ -4,7 +4,7 @@ from matplotlib.ticker import FuncFormatter
 from matplotlib import colors, patheffects
 
 from pyrocko.guts import Tuple, Float
-from pyrocko.plot import mpl_init
+from pyrocko.plot import mpl_init, mpl_graph_color
 
 from grond.plot.config import PlotConfig
 from grond.plot.collection import PlotItem
@@ -14,6 +14,15 @@ km = 1e3
 
 def km_fmt(x, p):
     return '%.1f' % (x / km)
+
+
+def get_source(history, source_type='mean'):
+    if source_type == 'mean':
+        return history.get_mean_source()
+    elif source_type == 'best':
+        return history.get_best_source()
+    else:
+        raise ValueError('current source_type is not defined.')
 
 
 class DynamicRuptureSlipMap(PlotConfig):
@@ -47,18 +56,14 @@ evolution in %.1f s intervals.
 ''' % self.dt_contour)
 
     def draw_figures(self, history, problem):
-        source_best = history.get_best_source()
-        source_mean = history.get_mean_source()
-
         store_ids = problem.get_gf_store_ids()
         store = problem.get_gf_store(store_ids[0])
 
         interpolation = 'nearest_neighbor'
 
-        sources = (source_best, source_mean)
-        plot_labels = ('Ensemble best', 'Ensemble mean')
+        for i, plabel in enumerate(('best', 'mean')):
+            source = get_source(history, source_type=plabel)
 
-        for i, (source, plabel) in enumerate(zip(sources, plot_labels)):
             fig, ax = plt.subplots(1, 1)
 
             # ToDo in function with "mean", "best" as arg
@@ -152,8 +157,72 @@ evolution in %.1f s intervals.
             cmap.set_label('Slip [m]')
 
             item = PlotItem(
-                name=plabel.replace(' ', '_').lower(),
-                title='%s slip distribution' % (plabel.lower()),
+                name='_'.join(['ensemble', plabel.lower()]),
+                title='ensemble %s slip distribution' % (plabel.lower()),
+                description=u'')
+
+            yield item, fig
+
+
+class DynamicRuptureSTF(PlotConfig):
+    '''
+    Slip map of best solution.
+    '''
+    name = 'rupture_source_time_function'
+    dt_sampling = Float.T(
+        default=2.5,
+        help='Moment rate sampling interval in seconds')
+    size_cm = Tuple.T(2, Float.T(), default=(20., 20.))
+
+    def make(self, environ):
+        environ.setup_modelling()
+        cm = environ.get_plot_collection_manager()
+        history = environ.get_history(subset='harvest')
+        problem = environ.get_problem()
+
+        mpl_init(fontsize=self.font_size)
+        cm.create_group_mpl(
+            self,
+            self.draw_figures(history, problem),
+            title=u'Moment Rate Function (STF)',
+            section='solution',
+            feather_icon='zap',  # alternatively: activity
+            description=u'''
+Source time function (moment release) of the pseudo dynamic rupture model.
+The moment rate function is sampled in %.1f s intervals.
+''' % self.dt_sampling)
+
+    def draw_figures(self, history, problem):
+        store_ids = problem.get_gf_store_ids()
+        store = problem.get_gf_store(store_ids[0])
+
+        interpolation = 'nearest_neighbor'
+
+        for i, plabel in enumerate(('best', 'mean')):
+            source = get_source(history, source_type=plabel)
+
+            fig, ax = plt.subplots(1, 1)
+
+            source.discretize_patches(store, interpolation)
+
+            mrate, times = source.get_moment_rate(
+                store=store, deltat=self.dt_sampling)
+
+            mrate_max = mrate.max()
+
+            ax.scatter(
+                times,
+                mrate / mrate_max,
+                c=mpl_graph_color(0))
+
+            ax.set_xlabel('Time [s]')
+            ax.set_ylabel(r'$\dot{M}$ / %.2e Nm/s' % mrate_max)
+
+            ax.set_xlim([0, times.max() + self.dt_sampling])
+
+            item = PlotItem(
+                name='_'.join(['ensemble', plabel.lower()]),
+                title='ensemble %s source time function' % (plabel.lower()),
                 description=u'')
 
             yield item, fig
