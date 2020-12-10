@@ -119,6 +119,7 @@ var yaml_type_map = [
     ['!grond.VolumePointProblem', Dummy],
     ['!grond.VLVDProblem', Dummy],
     ['!grond.DynamicRuptureProblem', Dummy],
+    ['!grond.LightDynamicRuptureProblem', Dummy],
     ['!pf.MTSource', Dummy],
     ['!pf.RectangularSource', Dummy],
     ['!pf.DoubleDCSource', Dummy],
