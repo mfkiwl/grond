@@ -46,6 +46,7 @@ class DynamicRuptureProblemConfig(ProblemConfig):
         # TODO: handle magnitude and slip
         base_source = gf.PseudoDynamicRupture.from_pyrocko_event(
             event,
+            magnitude=None,
             anchor='top',
             nx=self.ranges['nx'].start,
             ny=self.ranges['ny'].start,
@@ -83,7 +84,7 @@ class DynamicRuptureProblem(Problem):
         Parameter('length', 'm', label='Length', **as_km),
         Parameter('width', 'm', label='Width', **as_km),
         Parameter('slip', 'm', label='Slip', optional=True),
-        Parameter('magnitude', label='Magnitude', optional=True),
+        # Parameter('magnitude', label='Magnitude', optional=True),
         Parameter('strike', 'deg', label='Strike'),
         Parameter('dip', 'deg', label='Dip'),
         Parameter('rake', 'deg', label='Rake'),
