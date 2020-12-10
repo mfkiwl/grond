@@ -242,6 +242,9 @@ class LightDynamicRuptureProblem(DynamicRuptureProblem):
 
         return src.clone(**p)
 
+    def preconstrain(self, x, optimiser=None):
+        pass
+
     @classmethod
     def get_plot_classes(cls):
         from . import plot
