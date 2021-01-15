@@ -4,7 +4,7 @@ from matplotlib.ticker import FuncFormatter
 from matplotlib import colors, patheffects
 
 from pyrocko.guts import Tuple, Float, Bool
-from pyrocko.plot import mpl_init, mpl_graph_color, color
+from pyrocko.plot import mpl_init, mpl_graph_color, mpl_color
 from pyrocko.plot.dynamic_rupture import RuptureMap
 
 from grond.plot.config import PlotConfig
@@ -211,16 +211,16 @@ The moment rate function is sampled in %.1f s intervals.
 
             mrate_max = mrate.max()
 
+            ax.fill_between(
+                times,
+                mrate / mrate_max,
+                color=mpl_color(x='aluminium2'),
+                alpha=0.7)
+
             ax.scatter(
                 times,
                 mrate / mrate_max,
                 c=mpl_graph_color(0))
-
-            ax.fill_between(
-                times,
-                mrate / mrate_max,
-                color=color(x='aluminium1'),
-                alpha=0.4)
 
             ax.set_xlabel('Time [s]')
             ax.set_ylabel(r'$\dot{M}$ / %.2e Nm/s' % mrate_max)
@@ -268,24 +268,32 @@ class DynamicRuptureMap(PlotConfig):
             self,
             self.draw_rupture_map(history, problem),
             title=u'Rupture Dislocations',
-            section='fits',
+            section='solution',
             feather_icon='map',
             description=u'''
 Maps showing orientation and dislocation of the PseudoDynamicRupture.
 ''')
 
     def draw_rupture_map(self, history, problem):
+        from pyrocko import orthodrome as pod
+
         store_ids = problem.get_gf_store_ids()
         store = problem.get_gf_store(store_ids[0])
 
-        def plot_rupture(source, model_name, ifig):
+        def plot_rupture(source, model_name):
             item = PlotItem(
-                name='fig_%i' % ifig,
+                name='ensemble_%s' % model_name,
                 attributes={},
                 title=u'Final static rupture dislocation - %s model'
                       % model_name,
                 description=u'''
 Static rupture dislocation from %s model.''' % model_name)
+
+            lat, lon = pod.ne_to_latlon(
+                source.lat,
+                source.lon,
+                source.north_shift,
+                source.east_shift)
 
             map_kwargs = dict(
                 lat=source.lat,
@@ -296,18 +304,21 @@ Static rupture dislocation from %s model.''' % model_name)
                 source=source,
                 show_topo=self.show_topo,
                 show_grid=self.show_grid,
-                show_rivers=self.show_rivers)
+                show_rivers=self.show_rivers,
+                color_wet=(216, 242, 254),
+                color_dry=(238, 236, 230))
+
+            source.discretize_patches(store, interpolation='nearest_neighbor')
 
             m = RuptureMap(**map_kwargs)
             m.draw_dislocation(cmap='summer')
-            m.draw_dislocation_vector(S='i10.', I='x50')
             m.draw_time_contour(store)
-            m.draw_dislocation_contour()
             m.draw_nucleation_point()
+            m.draw_top_edge()
 
             return (item, m)
 
         for i, plabel in enumerate(('best', 'mean')):
             source = get_source(history, source_type=plabel)
 
-            yield plot_rupture(source, plabel, i)
+            yield plot_rupture(source, plabel)

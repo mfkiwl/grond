@@ -211,7 +211,7 @@ class LightDynamicRuptureProblemConfig(DynamicRuptureProblemConfig):
             event_name=event.name,
             event_time=util.time_to_str(event.time))
 
-        problem = DynamicRuptureProblem(
+        problem = LightDynamicRuptureProblem(
             name=expand_template(self.name_template, subs),
             base_source=base_source,
             distance_min=self.distance_min,
@@ -233,7 +233,7 @@ class LightDynamicRuptureProblem(DynamicRuptureProblem):
         Parameter('depth', 'm', label='depth', **as_km),
         Parameter('length', 'm', label='Length', **as_km),
         Parameter('width', 'm', label='Width', **as_km),
-        Parameter('gamma', 'vr/vs', label=r'$\gamma$'),
+        Parameter('gamma', 'vr/vs', label=r'$\gamma$')
     ]
 
     def get_source(self, x):
@@ -246,7 +246,7 @@ class LightDynamicRuptureProblem(DynamicRuptureProblem):
         return src.clone(**p)
 
     def preconstrain(self, x, optimiser=None):
-        pass
+        return x
 
     @classmethod
     def get_plot_classes(cls):
