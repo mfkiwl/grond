@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 from matplotlib import colors, patheffects
 
-from pyrocko.guts import Tuple, Float
-from pyrocko.plot import mpl_init, mpl_graph_color
+from pyrocko.guts import Tuple, Float, Bool
+from pyrocko.plot import mpl_init, mpl_graph_color, color
+from pyrocko.plot.dynamic_rupture import RuptureMap
 
 from grond.plot.config import PlotConfig
 from grond.plot.collection import PlotItem
@@ -172,7 +173,7 @@ class DynamicRuptureSTF(PlotConfig):
     dt_sampling = Float.T(
         default=2.5,
         help='Moment rate sampling interval in seconds')
-    size_cm = Tuple.T(2, Float.T(), default=(20., 20.))
+    size_cm = Tuple.T(2, Float.T(), default=(15., 15.))
 
     def make(self, environ):
         environ.setup_modelling()
@@ -215,10 +216,17 @@ The moment rate function is sampled in %.1f s intervals.
                 mrate / mrate_max,
                 c=mpl_graph_color(0))
 
+            ax.fill_between(
+                times,
+                mrate / mrate_max,
+                color=color(x='aluminium1'),
+                alpha=0.4)
+
             ax.set_xlabel('Time [s]')
             ax.set_ylabel(r'$\dot{M}$ / %.2e Nm/s' % mrate_max)
 
             ax.set_xlim([0, times.max() + self.dt_sampling])
+            ax.grid(True)
 
             item = PlotItem(
                 name='_'.join(['ensemble', plabel.lower()]),
@@ -226,3 +234,80 @@ The moment rate function is sampled in %.1f s intervals.
                 description=u'')
 
             yield item, fig
+
+
+class DynamicRuptureMap(PlotConfig):
+    '''
+    Overview map of best solution.
+    '''
+    name = 'rupture_overview_map'
+    size_cm = Tuple.T(
+        2, Float.T(),
+        default=(20., 20.),
+        help='width and length of the figure in cm')
+    show_topo = Bool.T(
+        default=False,
+        help='show topography')
+    show_grid = Bool.T(
+        default=True,
+        help='show the lat/lon grid')
+    show_rivers = Bool.T(
+        default=True,
+        help='show rivers on the map')
+    radius = Float.T(
+        optional=True,
+        help='radius of the map around campaign center lat/lon')
+
+    def make(self, environ):
+        environ.setup_modelling()
+        cm = environ.get_plot_collection_manager()
+        history = environ.get_history(subset='harvest')
+        problem = environ.get_problem()
+
+        cm.create_group_automap(
+            self,
+            self.draw_rupture_map(history, problem),
+            title=u'Rupture Dislocations',
+            section='fits',
+            feather_icon='map',
+            description=u'''
+Maps showing orientation and dislocation of the PseudoDynamicRupture.
+''')
+
+    def draw_rupture_map(self, history, problem):
+        store_ids = problem.get_gf_store_ids()
+        store = problem.get_gf_store(store_ids[0])
+
+        def plot_rupture(source, model_name, ifig):
+            item = PlotItem(
+                name='fig_%i' % ifig,
+                attributes={},
+                title=u'Final static rupture dislocation - %s model'
+                      % model_name,
+                description=u'''
+Static rupture dislocation from %s model.''' % model_name)
+
+            map_kwargs = dict(
+                lat=source.lat,
+                lon=source.lon,
+                radius=self.radius or source.length,
+                width=self.size_cm[0],
+                height=self.size_cm[1],
+                source=source,
+                show_topo=self.show_topo,
+                show_grid=self.show_grid,
+                show_rivers=self.show_rivers)
+
+            m = RuptureMap(**map_kwargs)
+            m.draw_dislocation(cmap='summer')
+            m.draw_dislocation_vector(S='i10.', I='x50')
+            m.draw_time_contour(store)
+            m.draw_dislocation_contour()
+            m.draw_nucleation_point()
+
+            return (item, m)
+
+        for i, plabel in enumerate(('best', 'mean')):
+            source = get_source(history, source_type=plabel)
+
+            yield plot_rupture(source, plabel, i)
