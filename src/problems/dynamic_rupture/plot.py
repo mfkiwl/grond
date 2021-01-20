@@ -296,8 +296,8 @@ Static rupture dislocation from %s model.''' % model_name)
                 source.east_shift)
 
             map_kwargs = dict(
-                lat=source.lat,
-                lon=source.lon,
+                lat=lat,
+                lon=lon,
                 radius=self.radius or source.length,
                 width=self.size_cm[0],
                 height=self.size_cm[1],
