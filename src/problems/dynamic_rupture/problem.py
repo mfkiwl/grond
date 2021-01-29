@@ -3,6 +3,7 @@ import logging
 
 from pyrocko import gf, util
 from pyrocko.guts import String, Float, Dict, Int, Bool, StringChoice
+from pyrocko.gf.seismosizer import map_anchor
 
 from grond.meta import expand_template, Parameter, has_get_plot_classes, \
     GrondError
@@ -21,6 +22,11 @@ as_gpa = dict(scale_factor=1e9, scale_unit='GPa')
 class DynamicRuptureProblemConfig(ProblemConfig):
 
     ranges = Dict.T(String.T(), gf.Range.T())
+
+    anchor = String.T(
+        choices=tuple(map_anchor.keys()),
+        default='top')
+
     decimation_factor = Int.T(
         default=1,
         help='Decimation factor of the discretized sup-faults')
@@ -47,7 +53,7 @@ class DynamicRuptureProblemConfig(ProblemConfig):
         base_source = gf.PseudoDynamicRupture.from_pyrocko_event(
             event,
             magnitude=None,
-            anchor='top',
+            anchor=self.anchor,
             nx=self.ranges['nx'].start,
             ny=self.ranges['ny'].start,
             decimation_factor=self.decimation_factor,
