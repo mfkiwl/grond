@@ -23,7 +23,7 @@ class DynamicRuptureProblemConfig(ProblemConfig):
 
     ranges = Dict.T(String.T(), gf.Range.T())
 
-    anchor = String.T(
+    anchor = StringChoice.T(
         choices=tuple(map_anchor.keys()),
         default='top')
 
