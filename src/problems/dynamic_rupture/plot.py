@@ -4,6 +4,7 @@ from matplotlib.ticker import FuncFormatter
 from matplotlib import colors, patheffects
 
 from pyrocko.guts import Tuple, Float, Bool
+from pyrocko.gf.seismosizer import map_anchor
 from pyrocko.plot import mpl_init, mpl_graph_color, mpl_color
 from pyrocko.plot.dynamic_rupture import RuptureMap
 
@@ -64,6 +65,7 @@ evolution in %.1f s intervals.
 
         for i, plabel in enumerate(('best', 'mean')):
             source = get_source(history, source_type=plabel)
+            anchor_x, anchor_y = map_anchor[source.anchor]
 
             fig, ax = plt.subplots(1, 1)
 
@@ -78,6 +80,9 @@ evolution in %.1f s intervals.
                 .reshape(source.nx, source.ny)
             patches_t = num.array([p.time for p in patches])\
                 .reshape(source.nx, source.ny)
+
+            patches_x += (anchor_x + 1.) / 2. * source.length
+            patches_y += (anchor_y + 1.) / 2. * source.width
 
             abs_disloc = num.linalg.norm(dislocations, axis=1)
             abs_disloc = abs_disloc.reshape(source.nx, source.ny)
@@ -104,7 +109,7 @@ evolution in %.1f s intervals.
             cmap = truncate_colormap(plt.get_cmap('winter'), 0., 0.8)
 
             contour = ax.contour(
-                patches_x + source.length/2, patches_y, patches_t,
+                patches_x, patches_y, patches_t,
                 levels=contours, alpha=.8, colors='k')
 
             labels = ax.clabel(
@@ -197,14 +202,10 @@ The moment rate function is sampled in %.1f s intervals.
         store_ids = problem.get_gf_store_ids()
         store = problem.get_gf_store(store_ids[0])
 
-        interpolation = 'nearest_neighbor'
-
         for i, plabel in enumerate(('best', 'mean')):
             source = get_source(history, source_type=plabel)
 
             fig, ax = plt.subplots(1, 1)
-
-            source.discretize_patches(store, interpolation)
 
             mrate, times = source.get_moment_rate(
                 store=store, deltat=self.dt_sampling)
